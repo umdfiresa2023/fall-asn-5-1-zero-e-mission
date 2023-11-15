@@ -13,8 +13,8 @@ Instructions: Run the script below to download and declare the required packages
 
 ```{r}
 #| message: false
-#install.packages("moderndive")
-#install.packages("tidyverse")
+install.packages("moderndive")
+install.packages("tidyverse")
 library("moderndive")
 library("tidyverse")
 ```
@@ -22,24 +22,26 @@ library("tidyverse")
 Instructions: Upload your team's final dataframe into Posit Cloud. Use the read.csv function to upload the dataframe into the Posit Cloud Environment.
 
 ```{r}
-
+df <- read.csv("finalnasa.csv")
 ```
 
 **Question 1: What is the unit of each observation in the data? (2 points)**
 
 Instructions: Identify which columns in the dataset make each observation unique. Usually, there is a column indicating geographical locations and another column showing the frequency of the data. For an example, you can look at asn-6-4-key.qmd Part 1 Question 1.
 
-Answer:
+Answer: ID, year, month, day
 
 **Question 2: What is the outcome variable? (2 points)**
 
 Instructions: Indicate which columns represent the outcome variable and describe its unit.
 
-Answer:
+Answer: The outcome variable is NO2 emissions and its unit is in 10^16^ molecules per cm\^2
 
 **Question 3: What are the treatment and control variables?** **(4 points)**
 
 Instructions: For this assignment, you will not distinguish between the treatment and control variables. Instead, please list all treatment and control variables. For each variable, indicate whether it is a numerical variable or a categorical variable.
+
+Answer: Our treatment variable was the opening of the lithium ion battery recycling plants. This is a categorical variable as the variable determined whether the lithium ion battery recycling plant was open or not. We did not have any control variables.
 
 ### **Part 2. Running a Basic Regression**
 
@@ -47,14 +49,22 @@ Instructions: For this assignment, you will not distinguish between the treatmen
 
 Instructions: Choose a numerical variable that would best predict the outcome variable. As we are trying to predict the outcome, this variable does not have to be the treatment variable.
 
-Answer:
+Answer: A numerical variable that could be used to predict the outcome variable is the amount of time that a lithium ion battery recycling plant has been open.
 
 **Question 5: What does the best-fitting line look like between the numerical variable and the outcome variable? (2 points)**
 
 Instructions: Make a scatterplot that shows the relationship between the numerical variable and the outcome variable. In addition, add geom_smooth(method="lm", se=FALSE) to show the best-fitting line. You can also review this concept in this [DataCamp video.](https://campus.datacamp.com/courses/modeling-with-data-in-the-tidyverse/modeling-with-basic-regression?ex=1)
 
 ```{r}
+# to plot it according to our numerical variable, we need to add a column which contains the number of months that a lithium ion recycling plant has been open
 
+df$opening_month <- ifelse(df$ID == 2, 5, 10)
+df$months_open <- ifelse(df$Year < 2022, 0, 0)
+df$months_open <- ifelse(df$Year == 2022 & df$opening_month < df$Month, df$Month - df$opening_month, df$months_open)
+df$months_open <- ifelse(df$Year == 2023 & df$ID == 2, df$Month + 7, df$months_open)
+df$months_open <- ifelse(df$Year == 2023 & df$ID == 3, df$Month + 2, df$months_open)
+
+ggplot(df, aes(x = months_open, y = NO2)) + geom_point() + labs(x = "Months Open", y = "NO2 emission") + geom_smooth(method = "lm", se = FALSE)
 ```
 
 **Question 6: What is the slope and intercept of the best-fitting line? (2 points)**
@@ -62,18 +72,19 @@ Instructions: Make a scatterplot that shows the relationship between the numeric
 Instructions: Fit a regression model with the lm(y\~x, data) function to predict the outcome variable using the numerical variable that you have chosen. You can also review this concept in this [DataCamp video.](https://campus.datacamp.com/courses/modeling-with-data-in-the-tidyverse/modeling-with-basic-regression?ex=1)
 
 ```{r}
-
+model_1 <- lm(NO2 ~ months_open, df)
+model_1
 ```
 
 **Question 7: Based on your regression results, what are the values and description of each letter in the equation** $Y_{it} = \beta_0 + \beta_1 X_{it} + \epsilon_{it}$ **(5 points)**
 
 Instructions: For an example of this, you can review asn-6-4-key.qmd Part 1.
 
-$Y_{it}$ represent the outcome variable \_\_\_\_ for each \_\_\_\_ (geographical unit) $i$, and \_\_\_\_\_ (time unit) $t$.
+$Y_{it}$ represent the outcome variable NO2 emissions for each latitude/longitude (geographical unit) $i$, and month (time unit) $t$.
 
-Based on the regression from Question 6, $\beta_0$ is equal to \_\_\_\_\_.
+Based on the regression from Question 6, $\beta_0$ is equal to 2.030e+15.
 
-Based on the regression from Question 6, $\beta_1$ is equal to \_\_\_\_\_.
+Based on the regression from Question 6, $\beta_1$ is equal to -8.455e+12.
 
 ### **Part 3. Running Multiple Regressions**
 
@@ -82,7 +93,7 @@ Based on the regression from Question 6, $\beta_1$ is equal to \_\_\_\_\_.
 Instructions: You can review how to do this in this [DataCamp](https://campus.datacamp.com/courses/modeling-with-data-in-the-tidyverse/modeling-with-multiple-regression?ex=4) video. Please use the get_regression_table( ) function to print the output.
 
 ```{r}
-
+get_regression_table(model_1)
 ```
 
 **Question 9: What is the sum of squared residuals of the model that you ran in Question 8? (1 point)**
@@ -90,7 +101,9 @@ Instructions: You can review how to do this in this [DataCamp](https://campus.da
 Instructions: You can review how to do this in this [DataCamp](https://campus.datacamp.com/courses/modeling-with-data-in-the-tidyverse/modeling-with-multiple-regression?ex=4) video.
 
 ```{r}
-
+get_regression_points(model_1) %>%
+  mutate(sq_residuals = residual^2) %>%
+  summarize(sum_sq_residuals = sum(sq_residuals))
 ```
 
 **Question 10: Run a multiple regression model that uses all possible numerical, binary, and categorical variables to predict the outcome variable. What does the regression table look like? (2 points)**
@@ -105,14 +118,14 @@ The summary(ModelName) function is then used to print out the regression model. 
 
 ```{r}
 #| message: false
-#install.packages("lfe")
+install.packages("lfe")
 library("lfe")
 ```
 
 Write your model below and run it.
 
 ```{r}
-
+model_all_vars <- felm(NO2 ~ months_open + open, df)
 ```
 
 **Question 11: What is the sum of squared residuals from the model that you ran in Question 10? (2 points)**
@@ -120,7 +133,7 @@ Write your model below and run it.
 Instructions: Because the function get_regression_points( ) does not work with the function felm( ), you have to replace get_regression_points(ModelName) with ModelName\$residuals. The rest of the code is the same as this [DataCamp](https://campus.datacamp.com/courses/modeling-with-data-in-the-tidyverse/modeling-with-multiple-regression?ex=4) video.
 
 ```{r}
-
+sum(model_all_vars$residuals^2)
 ```
 
 **Question 12: What equation describes the regression in Question 10? What are the values of each coefficient? (2 points)**
@@ -128,6 +141,8 @@ Instructions: Because the function get_regression_points( ) does not work with t
 Instructions: You can modify the equation shown below. Afterwards, indicate the value of each $\beta$ . To see an example of how categorical variables are written in an equation, see asn-6-4-key.qmd Part 1 Question 4, 5, and 6.
 
 Answer: $Y_{it} = \beta_0 + \beta_1 X_{it} + \epsilon_{it}$
+
+Typically, you would add all of the categorical variables at the end of the equation, but since we don't have any categorical variables, our equation stays the same.
 
 **Question 13: Create more binary or categorical variables by multiplying binary variables or combining categorical variables together as you see fit to better predict the outcome variable. Explain what real-world factor each new variable represents. (2 points)**
 
@@ -137,23 +152,23 @@ Instructions: You created new variables by multiplying binary variables and comb
 
 ```
 
-Answer:
+Answer: Since the only variable that was added was the binary variable open, we do not need to combine it with anything. It represents whether or not the factory was open.
 
 **Question 14: Run a multiple regression model that uses all possible numerical, binary, and categorical variables to predict the outcome variable. What does the regression table look like? (2 points)**
 
 ```{r}
-
+model_all_vars <- felm(NO2 ~ months_open + open, df)
 ```
 
 **Question 15: What is the sum of squared residuals from the model in Question 13? (2 points)**
 
 ```{r}
-
+sum(model_all_vars$residuals^2)
 ```
 
 **Question 16: Based on the sum of squared residuals, which model in this assignment best predicts the outcome? (1 point)**
 
-Answer:
+Answer: The model with all variables, including the binary variable open, seems to slightly better predict the outcome.
 
 ### **Part 4. Thinking about causal inference**
 
@@ -161,6 +176,6 @@ Note: Every team except Team Electric Grid and The Whistle Blowers has to comple
 
 **Question 17: In your opinion, what are some real-world factors that impact both the treatment and control variables that we have not taken into account? (2 points)**
 
-Answer:
+Answer: Some real world factors is that other things within a certain area can also cause NO2 emissions to change. Since the opening of an EV recycling plant is not the only thing that happens within a certain area, we cannot be certain that there are not other factors that would also impact the NO2 emissions of a certain area.
 
 You have reached the end of this assignment. Commit and push your updates back into the GitHub repository. You can find the step-by-step tutorial [here.](https://drive.google.com/drive/u/0/folders/1eSMfNoV_ilp4OnID2Ql3YT2qXkhCS7Vm)
